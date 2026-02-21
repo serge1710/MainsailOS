@@ -1,0 +1,52 @@
+#!/bin/bash
+set -xe
+export LC_ALL=C
+
+########################################
+# Functions and Basic Configuration    #
+########################################
+
+source /common.sh
+install_cleanup_trap
+
+source /files/00-config
+
+########################################
+# Configuration                        #
+########################################
+
+NODE_VERSION="20"
+
+########################################
+# Fix /tmp permissions                 #
+########################################
+
+mkdir -p /tmp
+chmod 777 /tmp
+
+########################################
+# Install Node.js                      #
+########################################
+
+echo "Installing Node.js ${NODE_VERSION}.x..."
+curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
+apt-get update
+apt-get install --yes nodejs
+
+########################################
+# Install pnpm                         #
+########################################
+
+echo "Installing pnpm..."
+npm install -g pnpm
+
+########################################
+# Verify installation                  #
+########################################
+
+if ! which pnpm &> /dev/null; then
+    echo "ERROR: pnpm not found after install"
+    exit 1
+fi
+
+echo "Node.js $(node --version) and pnpm $(pnpm --version) installed successfully"

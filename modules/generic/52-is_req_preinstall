@@ -1,0 +1,49 @@
+#!/bin/bash
+set -xe
+export LC_ALL=C
+
+########################################
+# Functions and Basic Configuration    #
+########################################
+
+source /common.sh
+install_cleanup_trap
+
+source /files/00-config
+
+########################################
+# Configuration                        #
+########################################
+
+VENV_DIR="/home/${BASE_USER}/klippy-env"
+DEPS="python3-numpy python3-matplotlib libatlas3-base libatlas-base-dev libgfortran5"
+PIP_PKG="numpy<=1.23.4"
+
+########################################
+# Install system dependencies          #
+########################################
+
+echo "Installing Input Shaper dependencies..."
+apt-get update
+apt-get install --yes ${DEPS}
+
+########################################
+# Install numpy into Klipper venv      #
+########################################
+
+if [ -d "${VENV_DIR}" ] && [ -x "${VENV_DIR}/bin/pip" ]; then
+    echo "Installing numpy into klippy-env..."
+    sudo -u "${BASE_USER}" "${VENV_DIR}/bin/pip" install -v "${PIP_PKG}"
+else
+    echo "ERROR: Klipper venv not found at ${VENV_DIR}"
+    exit 1
+fi
+
+########################################
+# Cleanup                              #
+########################################
+
+echo "Cleanup..."
+sudo -u "${BASE_USER}" rm -rf "/home/${BASE_USER}/.cache"
+
+echo "Input Shaper requirements installed successfully"

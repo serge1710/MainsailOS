@@ -51,7 +51,7 @@ if [ -f /etc/hostname ]; then
     read -r ORG_HOSTNAME < /etc/hostname
     ORG_HOSTNAME=${ORG_HOSTNAME//$'\n'/}
 else
-    ORG_HOSTNAME=raspberrypi
+    ORG_HOSTNAME=ratos     #raspberrypi
 fi
 
 echo "$NEW_HOSTNAME" > /etc/hostname

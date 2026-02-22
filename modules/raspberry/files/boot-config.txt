@@ -31,6 +31,10 @@ gpu_mem=128
 ## Do not use more than 256Mb on Pi Model 4, it uses its own Management.
 gpu_mem=256
 
+[cm5]
+# Manta requires use of the old USB2 interface
+dtoverlay=dwc2,dr_mode=host
+
 [all]
 
 ## SPI Interface is enabled by default for Input Shaper

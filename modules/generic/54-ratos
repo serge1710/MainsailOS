@@ -104,7 +104,9 @@ if [ ! -f "${SETUP_SCRIPT}" ]; then
     find /home/${BASE_USER}/ratos-configurator -name "setup.sh" 2>/dev/null
     exit 1
 fi
-sudo -u "${BASE_USER}" bash "${SETUP_SCRIPT}"
+pushd "/home/${BASE_USER}/ratos-configurator/configuration/scripts" &> /dev/null || exit 1
+sudo -u "${BASE_USER}" bash setup.sh
+popd &> /dev/null || exit 1
 
 ########################################
 # Start configurator for extension API #

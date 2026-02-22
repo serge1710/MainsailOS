@@ -51,7 +51,7 @@ popd &> /dev/null || exit 1
 ########################################
 
 echo "Installing avahi-daemon config..."
-cp /files/avahi-daemon.conf /etc/avahi/avahi-daemon.conf
+cp /files/ratos/avahi-daemon.conf /etc/avahi/avahi-daemon.conf
 
 echo "Creating ratos log file..."
 touch /var/log/ratos.log

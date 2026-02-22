@@ -1,1 +1,176 @@
+#!/bin/bash
+set -xe
+export LC_ALL=C
 
+########################################
+# Functions and Basic Configuration    #
+########################################
+
+source /common.sh
+install_cleanup_trap
+
+source /files/00-config
+
+########################################
+# Configuration                        #
+########################################
+
+RATOS_CONFIG_REPO="https://github.com/Rat-OS/RatOS-configuration.git"
+RATOS_CONFIG_BRANCH="v2.1.x"
+RATOS_THEME_REPO="https://github.com/Rat-OS/RatOS-theme.git"
+RATOS_THEME_BRANCH="v2.1.x"
+RATOS_CONFIGURATOR_REPO="https://github.com/Rat-OS/RatOS-configurator.git"
+RATOS_CONFIGURATOR_BRANCH="v2.1.x-deployment-2"
+DEPS="python3-serial python3-opencv"
+
+########################################
+# Install system dependencies          #
+########################################
+
+echo "Installing RatOS dependencies..."
+apt-get update --allow-releaseinfo-change
+apt-get install --yes ${DEPS}
+
+########################################
+# Clone repositories                   #
+########################################
+
+echo "Cloning RatOS configuration..."
+pushd "/home/${BASE_USER}/printer_data/config" &> /dev/null || exit 1
+sudo -u "${BASE_USER}" git clone -b "${RATOS_CONFIG_BRANCH}" "${RATOS_CONFIG_REPO}" RatOS
+sudo -u "${BASE_USER}" git clone -b "${RATOS_THEME_BRANCH}" "${RATOS_THEME_REPO}" .theme
+popd &> /dev/null || exit 1
+
+echo "Cloning RatOS configurator..."
+pushd "/home/${BASE_USER}" &> /dev/null || exit 1
+sudo -u "${BASE_USER}" git clone -b "${RATOS_CONFIGURATOR_BRANCH}" "${RATOS_CONFIGURATOR_REPO}" ratos-configurator
+popd &> /dev/null || exit 1
+
+########################################
+# Copy system files                    #
+########################################
+
+echo "Installing avahi-daemon config..."
+cp /files/avahi-daemon.conf /etc/avahi/avahi-daemon.conf
+
+echo "Creating ratos log file..."
+touch /var/log/ratos.log
+chown "${BASE_USER}:${BASE_USER}" /var/log/ratos.log
+
+########################################
+# Set git config                       #
+########################################
+
+sudo -u "${BASE_USER}" git config --global pull.ff only
+
+########################################
+# Create release file                  #
+########################################
+
+echo "Creating release file..."
+if [ -f "/etc/ratos_version" ]; then
+    rm -f /etc/ratos_version
+fi
+
+function get_parent {
+    grep VERSION_CODENAME /etc/os-release | cut -d '=' -f2
+}
+
+echo "${DIST_NAME} v${DIST_VERSION} ($(get_parent))" > "/etc/${DIST_NAME,,}-release"
+
+# Symlink for moonraker distro detection (must sort before other release files)
+if [ -f "/etc/armbian-release" ]; then
+    echo "Applying release file workaround (armbian)..."
+    ln -s /etc/"${DIST_NAME,,}"-release /etc/aaaa-release
+fi
+if [ -f "/etc/orangepi-release" ]; then
+    echo "Applying release file workaround (orangepi)..."
+    ln -s /etc/"${DIST_NAME,,}"-release /etc/aaaa-release
+fi
+
+# Create variant file
+echo "${BASE_DISTRO}" > /etc/"${BASE_DISTRO}"-variant
+
+########################################
+# Install RatOS Configurator           #
+########################################
+
+echo "Installing RatOS Configurator..."
+sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/scripts/setup.sh
+
+########################################
+# Start configurator for extension API #
+########################################
+
+echo "Starting RatOS Configurator..."
+pushd "/home/${BASE_USER}/ratos-configurator" &> /dev/null || exit 1
+sudo -u "${BASE_USER}" npm run start &
+# Wait for configurator to be ready (404 means it's up but no route)
+timeout 300 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" localhost:3000)" = "404" ]; do sleep 5; done' || true
+popd &> /dev/null || exit 1
+
+########################################
+# Install RatOS Configuration          #
+########################################
+
+echo "Running ratos-install.sh..."
+sudo -u "${BASE_USER}" /home/"${BASE_USER}"/printer_data/config/RatOS/scripts/ratos-install.sh
+
+########################################
+# MOTD                                 #
+########################################
+
+cat /files/motd > /etc/motd
+
+########################################
+# Post install                         #
+########################################
+
+echo "Running ratos-post-install.sh..."
+sudo -u "${BASE_USER}" /home/"${BASE_USER}"/printer_data/config/RatOS/scripts/ratos-post-install.sh
+
+########################################
+# Stop configurator                    #
+########################################
+
+echo "Stopping RatOS Configurator..."
+set +e
+curl 'http://localhost:3000/configure/api/trpc/kill' &> /dev/null
+set -e
+
+retries=0
+while [ "$(pgrep -f -c "ratos-configurator")" -gt 0 ]; do
+    if [ $retries -gt 10 ]; then
+        echo "Configurator did not stop, killing..."
+        pkill -f "ratos-configurator"
+        if [ $retries -gt 12 ]; then
+            echo "Configurator cannot be killed, continuing..."
+            break
+        fi
+    fi
+    echo "Waiting for configurator to stop... ${retries}s"
+    sleep 1
+    retries=$((retries + 1))
+done
+
+if [ "$(pgrep -f -c "KlipperScreen")" -gt 0 ]; then
+    echo "Stopping KlipperScreen..."
+    retries=0
+    while [ "$(pgrep -f -c "KlipperScreen")" -gt 0 ]; do
+        if [ $retries -gt 10 ]; then
+            pkill -f "KlipperScreen" || true
+            if [ $retries -gt 12 ]; then
+                echo "KlipperScreen cannot be killed, continuing..."
+                break
+            fi
+        fi
+        echo "Waiting for KlipperScreen to stop... ${retries}s"
+        sleep 1
+        retries=$((retries + 1))
+    done
+fi
+
+echo "List running processes..."
+ps aux
+
+echo "RatOS installed successfully"

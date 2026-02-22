@@ -96,7 +96,7 @@ echo "${BASE_DISTRO}" > /etc/"${BASE_DISTRO}"-variant
 ########################################
 
 echo "Installing RatOS Configurator..."
-sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/scripts/setup.sh
+sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/app/scripts/setup.sh
 
 ########################################
 # Start configurator for extension API #

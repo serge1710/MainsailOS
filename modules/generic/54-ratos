@@ -15,11 +15,11 @@ source /files/00-config
 # Configuration                        #
 ########################################
 
-RATOS_CONFIG_REPO="https://github.com/Rat-OS/RatOS-configuration.git"
+RATOS_CONFIG_REPO="https://github.com/serge1710/RatOS-configurator.git"
 RATOS_CONFIG_BRANCH="v2.1.x"
 RATOS_THEME_REPO="https://github.com/Rat-OS/RatOS-theme.git"
 RATOS_THEME_BRANCH="v2.1.x"
-RATOS_CONFIGURATOR_REPO="https://github.com/Rat-OS/RatOS-configurator.git"
+RATOS_CONFIGURATOR_REPO="https://github.com/serge1710/RatOS-configurator.git"
 RATOS_CONFIGURATOR_BRANCH="v2.1.x-deployment-2"
 DEPS="python3-serial python3-opencv"
 

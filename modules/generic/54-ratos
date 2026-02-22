@@ -15,7 +15,7 @@ source /files/00-config
 # Configuration                        #
 ########################################
 
-RATOS_CONFIG_REPO="https://github.com/serge1710/RatOS-configurator.git"
+RATOS_CONFIG_REPO="https://github.com/Rat-OS/RatOS-configuration.git"
 RATOS_CONFIG_BRANCH="v2.1.x"
 RATOS_THEME_REPO="https://github.com/Rat-OS/RatOS-theme.git"
 RATOS_THEME_BRANCH="v2.1.x"
@@ -35,12 +35,14 @@ apt-get install --yes ${DEPS}
 # Clone repositories                   #
 ########################################
 
+# Clone RatOS configuration into printer_data/config/RatOS
 echo "Cloning RatOS configuration..."
 pushd "/home/${BASE_USER}/printer_data/config" &> /dev/null || exit 1
 sudo -u "${BASE_USER}" git clone -b "${RATOS_CONFIG_BRANCH}" "${RATOS_CONFIG_REPO}" RatOS
 sudo -u "${BASE_USER}" git clone -b "${RATOS_THEME_BRANCH}" "${RATOS_THEME_REPO}" .theme
 popd &> /dev/null || exit 1
 
+# Clone RatOS configurator into home dir
 echo "Cloning RatOS configurator..."
 pushd "/home/${BASE_USER}" &> /dev/null || exit 1
 sudo -u "${BASE_USER}" git clone -b "${RATOS_CONFIGURATOR_BRANCH}" "${RATOS_CONFIGURATOR_REPO}" ratos-configurator
@@ -68,9 +70,7 @@ sudo -u "${BASE_USER}" git config --global pull.ff only
 ########################################
 
 echo "Creating release file..."
-if [ -f "/etc/ratos_version" ]; then
-    rm -f /etc/ratos_version
-fi
+[ -f "/etc/ratos_version" ] && rm -f /etc/ratos_version
 
 function get_parent {
     grep VERSION_CODENAME /etc/os-release | cut -d '=' -f2
@@ -96,7 +96,15 @@ echo "${BASE_DISTRO}" > /etc/"${BASE_DISTRO}"-variant
 ########################################
 
 echo "Installing RatOS Configurator..."
-sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/app/scripts/setup.sh
+# setup.sh is in the configurator repo under app/scripts/
+SETUP_SCRIPT="/home/${BASE_USER}/ratos-configurator/app/scripts/setup.sh"
+if [ ! -f "${SETUP_SCRIPT}" ]; then
+    echo "ERROR: setup.sh not found at ${SETUP_SCRIPT}"
+    echo "Available scripts:"
+    find /home/${BASE_USER}/ratos-configurator -name "setup.sh" 2>/dev/null
+    exit 1
+fi
+sudo -u "${BASE_USER}" bash "${SETUP_SCRIPT}"
 
 ########################################
 # Start configurator for extension API #
@@ -105,7 +113,7 @@ sudo -u "${BASE_USER}" bash /home/"${BASE_USER}"/ratos-configurator/app/scripts/
 echo "Starting RatOS Configurator..."
 pushd "/home/${BASE_USER}/ratos-configurator" &> /dev/null || exit 1
 sudo -u "${BASE_USER}" npm run start &
-# Wait for configurator to be ready (404 means it's up but no route)
+# Wait for configurator to be ready (404 means it's up but no route yet)
 timeout 300 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" localhost:3000)" = "404" ]; do sleep 5; done' || true
 popd &> /dev/null || exit 1
 
@@ -114,20 +122,32 @@ popd &> /dev/null || exit 1
 ########################################
 
 echo "Running ratos-install.sh..."
-sudo -u "${BASE_USER}" /home/"${BASE_USER}"/printer_data/config/RatOS/scripts/ratos-install.sh
+INSTALL_SCRIPT="/home/${BASE_USER}/printer_data/config/RatOS/scripts/ratos-install.sh"
+if [ ! -f "${INSTALL_SCRIPT}" ]; then
+    echo "ERROR: ratos-install.sh not found at ${INSTALL_SCRIPT}"
+    find /home/${BASE_USER} -name "ratos-install.sh" 2>/dev/null
+    exit 1
+fi
+sudo -u "${BASE_USER}" bash "${INSTALL_SCRIPT}"
 
 ########################################
 # MOTD                                 #
 ########################################
 
-cat /files/motd > /etc/motd
+cp /files/motd /etc/motd
 
 ########################################
 # Post install                         #
 ########################################
 
 echo "Running ratos-post-install.sh..."
-sudo -u "${BASE_USER}" /home/"${BASE_USER}"/printer_data/config/RatOS/scripts/ratos-post-install.sh
+POST_SCRIPT="/home/${BASE_USER}/printer_data/config/RatOS/scripts/ratos-post-install.sh"
+if [ ! -f "${POST_SCRIPT}" ]; then
+    echo "ERROR: ratos-post-install.sh not found at ${POST_SCRIPT}"
+    find /home/${BASE_USER} -name "ratos-post-install.sh" 2>/dev/null
+    exit 1
+fi
+sudo -u "${BASE_USER}" bash "${POST_SCRIPT}"
 
 ########################################
 # Stop configurator                    #

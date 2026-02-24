@@ -1,0 +1,60 @@
+#!/bin/bash
+set -xe
+export LC_ALL=C
+
+########################################
+# Functions and Basic Configuration    #
+########################################
+
+source /common.sh
+install_cleanup_trap
+
+source /files/00-config
+
+########################################
+# Configuration                        #
+########################################
+
+DFU_UTIL_REPO_PRIMARY="git://git.code.sf.net/p/dfu-util/dfu-util"
+DFU_UTIL_REPO_FALLBACK="https://gitlab.com/dfu-util/dfu-util.git"
+DFU_UTIL_DEPS="libusb-1.0-0-dev autoconf pandoc"
+DFU_UTIL_PURGE="pandoc"
+
+########################################
+# Install build dependencies           #
+########################################
+
+echo "Installing DFU-util build dependencies..."
+apt-get update --allow-releaseinfo-change
+apt-get install --yes ${DFU_UTIL_DEPS}
+
+########################################
+# Clone DFU-util                       #
+########################################
+
+echo "Cloning DFU-util..."
+pushd "/home/${BASE_USER}" &> /dev/null || exit 1
+sudo -u "${BASE_USER}" git clone "${DFU_UTIL_REPO_PRIMARY}" dfu-util \
+    || sudo -u "${BASE_USER}" git clone "${DFU_UTIL_REPO_FALLBACK}" dfu-util
+popd &> /dev/null || exit 1
+
+########################################
+# Build and install DFU-util           #
+########################################
+
+echo "Building and installing DFU-util..."
+pushd "/home/${BASE_USER}/dfu-util" &> /dev/null || exit 1
+./autogen.sh
+./configure
+make install
+popd &> /dev/null || exit 1
+
+########################################
+# Remove build dependencies            #
+########################################
+
+echo "Removing DFU-util build dependencies..."
+apt-get purge --yes ${DFU_UTIL_PURGE}
+apt-get autoremove --yes
+
+echo "DFU-util installed successfully"

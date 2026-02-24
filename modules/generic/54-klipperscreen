@@ -1,0 +1,86 @@
+#!/bin/bash
+set -xe
+export LC_ALL=C
+
+########################################
+# Functions and Basic Configuration    #
+########################################
+
+source /common.sh
+install_cleanup_trap
+
+source /files/00-config
+
+########################################
+# Configuration                        #
+########################################
+
+KLIPPERSCREEN_REPO="https://github.com/KlipperScreen/KlipperScreen.git"
+KLIPPERSCREEN_BRANCH="master"
+
+########################################
+# Add root rights to X11               #
+########################################
+
+echo "Adding root rights to X11..."
+echo "needs_root_rights=yes" >> /etc/X11/Xwrapper.config
+
+########################################
+# Clone KlipperScreen                  #
+########################################
+
+echo "Cloning KlipperScreen..."
+pushd "/home/${BASE_USER}" &> /dev/null || exit 1
+sudo -u "${BASE_USER}" git clone -b "${KLIPPERSCREEN_BRANCH}" "${KLIPPERSCREEN_REPO}" KlipperScreen
+popd &> /dev/null || exit 1
+
+########################################
+# Install KlipperScreen                #
+########################################
+
+echo "Installing KlipperScreen..."
+INSTALL_SCRIPT="/home/${BASE_USER}/KlipperScreen/scripts/KlipperScreen-install.sh"
+if [ ! -f "${INSTALL_SCRIPT}" ]; then
+    echo "ERROR: KlipperScreen-install.sh not found at ${INSTALL_SCRIPT}"
+    find "/home/${BASE_USER}/KlipperScreen" -name "*.sh" 2>/dev/null
+    exit 1
+fi
+pushd "/home/${BASE_USER}/KlipperScreen" &> /dev/null || exit 1
+sudo -u "${BASE_USER}" NETWORK="skipnetworkmanagerinstall" bash "${INSTALL_SCRIPT}"
+popd &> /dev/null || exit 1
+
+########################################
+# Mute KlipperScreen service output    #
+########################################
+
+echo "Configuring KlipperScreen service..."
+KLIPPERSCREEN_SERVICE="/etc/systemd/system/KlipperScreen.service"
+if [ -f "${KLIPPERSCREEN_SERVICE}" ]; then
+    sed -i 's/\[Service\]/\[Service\]\nStandardOutput=null\nStandardError=null/' "${KLIPPERSCREEN_SERVICE}"
+else
+    echo "WARNING: KlipperScreen.service not found, skipping service configuration."
+fi
+
+########################################
+# Stop KlipperScreen                   #
+########################################
+
+echo "Stopping KlipperScreen..."
+systemctl stop KlipperScreen || true
+
+retries=0
+while [ "$(pgrep -f -c "KlipperScreen" 2>/dev/null || echo 0)" -gt 0 ]; do
+    if [ $retries -gt 10 ]; then
+        echo "Forcing KlipperScreen stop..."
+        pkill -f "KlipperScreen" || true
+        if [ $retries -gt 12 ]; then
+            echo "KlipperScreen cannot be killed, continuing..."
+            break
+        fi
+    fi
+    echo "Waiting for KlipperScreen to stop... ${retries}s"
+    sleep 1
+    retries=$((retries + 1))
+done
+
+echo "KlipperScreen installed successfully"

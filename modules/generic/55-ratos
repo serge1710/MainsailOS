@@ -95,104 +95,104 @@ echo "${BASE_DISTRO}" > /etc/"${BASE_DISTRO}"-variant
 # Install RatOS Configurator           #
 ########################################
 
-echo "Installing RatOS Configurator..."
-# setup.sh is in the configurator repo under app/scripts/
-SETUP_SCRIPT="/home/${BASE_USER}/ratos-configurator/app/scripts/setup.sh"
-if [ ! -f "${SETUP_SCRIPT}" ]; then
-    echo "ERROR: setup.sh not found at ${SETUP_SCRIPT}"
-    echo "Available scripts:"
-    find /home/${BASE_USER}/ratos-configurator -name "setup.sh" 2>/dev/null
-    exit 1
-fi
-pushd "/home/${BASE_USER}/ratos-configurator/configuration/scripts" &> /dev/null || exit 1
-sudo -u "${BASE_USER}" bash setup.sh
-popd &> /dev/null || exit 1
+#echo "Installing RatOS Configurator..."
+## setup.sh is in the configurator repo under app/scripts/
+#SETUP_SCRIPT="/home/${BASE_USER}/ratos-configurator/app/scripts/setup.sh"
+#if [ ! -f "${SETUP_SCRIPT}" ]; then
+   # echo "ERROR: setup.sh not found at ${SETUP_SCRIPT}"
+    #echo "Available scripts:"
+    #find /home/${BASE_USER}/ratos-configurator -name "setup.sh" 2>/dev/null
+    #exit 1
+#fi
+#pushd "/home/${BASE_USER}/ratos-configurator/configuration/scripts" &> /dev/null || exit 1
+#sudo -u "${BASE_USER}" bash setup.sh
+#popd &> /dev/null || exit 1
 
 ########################################
 # Start configurator for extension API #
 ########################################
 
-echo "Starting RatOS Configurator..."
-pushd "/home/${BASE_USER}/ratos-configurator" &> /dev/null || exit 1
-sudo -u "${BASE_USER}" npm run start &
-# Wait for configurator to be ready (404 means it's up but no route yet)
-timeout 300 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" localhost:3000)" = "404" ]; do sleep 5; done' || true
-popd &> /dev/null || exit 1
+#echo "Starting RatOS Configurator..."
+#pushd "/home/${BASE_USER}/ratos-configurator" &> /dev/null || exit 1
+#sudo -u "${BASE_USER}" npm run start &
+## Wait for configurator to be ready (404 means it's up but no route yet)
+#timeout 300 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" localhost:3000)" = "404" ]; do sleep 5; done' || true
+#popd &> /dev/null || exit 1
 
 ########################################
 # Install RatOS Configuration          #
 ########################################
 
-echo "Running ratos-install.sh..."
-INSTALL_SCRIPT="/home/${BASE_USER}/printer_data/config/RatOS/scripts/ratos-install.sh"
-if [ ! -f "${INSTALL_SCRIPT}" ]; then
-    echo "ERROR: ratos-install.sh not found at ${INSTALL_SCRIPT}"
-    find /home/${BASE_USER} -name "ratos-install.sh" 2>/dev/null
-    exit 1
-fi
-sudo -u "${BASE_USER}" bash "${INSTALL_SCRIPT}"
+#echo "Running ratos-install.sh..."
+#INSTALL_SCRIPT="/home/${BASE_USER}/printer_data/config/RatOS/scripts/ratos-install.sh"
+#if [ ! -f "${INSTALL_SCRIPT}" ]; then
+  #  echo "ERROR: ratos-install.sh not found at ${INSTALL_SCRIPT}"
+   # find /home/${BASE_USER} -name "ratos-install.sh" 2>/dev/null
+   # exit 1
+#fi
+#sudo -u "${BASE_USER}" bash "${INSTALL_SCRIPT}"
 
 ########################################
 # MOTD                                 #
 ########################################
 
-cp /files/motd /etc/motd
+#cp /files/motd /etc/motd
 
 ########################################
 # Post install                         #
 ########################################
 
-echo "Running ratos-post-install.sh..."
-POST_SCRIPT="/home/${BASE_USER}/printer_data/config/RatOS/scripts/ratos-post-install.sh"
-if [ ! -f "${POST_SCRIPT}" ]; then
-    echo "ERROR: ratos-post-install.sh not found at ${POST_SCRIPT}"
-    find /home/${BASE_USER} -name "ratos-post-install.sh" 2>/dev/null
-    exit 1
-fi
-sudo -u "${BASE_USER}" bash "${POST_SCRIPT}"
+#echo "Running ratos-post-install.sh..."
+#POST_SCRIPT="/home/${BASE_USER}/printer_data/config/RatOS/scripts/ratos-post-install.sh"
+#if [ ! -f "${POST_SCRIPT}" ]; then
+    #echo "ERROR: ratos-post-install.sh not found at ${POST_SCRIPT}"
+    #find /home/${BASE_USER} -name "ratos-post-install.sh" 2>/dev/null
+    #exit 1
+#fi
+#sudo -u "${BASE_USER}" bash "${POST_SCRIPT}"
 
 ########################################
 # Stop configurator                    #
 ########################################
 
-echo "Stopping RatOS Configurator..."
-set +e
-curl 'http://localhost:3000/configure/api/trpc/kill' &> /dev/null
-set -e
+#echo "Stopping RatOS Configurator..."
+#set +e
+#curl 'http://localhost:3000/configure/api/trpc/kill' &> /dev/null
+#set -e
 
-retries=0
-while [ "$(pgrep -f -c "ratos-configurator")" -gt 0 ]; do
-    if [ $retries -gt 10 ]; then
-        echo "Configurator did not stop, killing..."
-        pkill -f "ratos-configurator"
-        if [ $retries -gt 12 ]; then
-            echo "Configurator cannot be killed, continuing..."
-            break
-        fi
-    fi
-    echo "Waiting for configurator to stop... ${retries}s"
-    sleep 1
-    retries=$((retries + 1))
-done
+#retries=0
+#while [ "$(pgrep -f -c "ratos-configurator")" -gt 0 ]; do
+    #if [ $retries -gt 10 ]; then
+        #echo "Configurator did not stop, killing..."
+       # pkill -f "ratos-configurator"
+       # if [ $retries -gt 12 ]; then
+           # echo "Configurator cannot be killed, continuing..."
+           # break
+        #fi
+    #fi
+    #echo "Waiting for configurator to stop... ${retries}s"
+    #sleep 1
+    #retries=$((retries + 1))
+#done
 
-if [ "$(pgrep -f -c "KlipperScreen")" -gt 0 ]; then
-    echo "Stopping KlipperScreen..."
-    retries=0
-    while [ "$(pgrep -f -c "KlipperScreen")" -gt 0 ]; do
-        if [ $retries -gt 10 ]; then
-            pkill -f "KlipperScreen" || true
-            if [ $retries -gt 12 ]; then
-                echo "KlipperScreen cannot be killed, continuing..."
-                break
-            fi
-        fi
-        echo "Waiting for KlipperScreen to stop... ${retries}s"
-        sleep 1
-        retries=$((retries + 1))
-    done
-fi
+#if [ "$(pgrep -f -c "KlipperScreen")" -gt 0 ]; then
+    #echo "Stopping KlipperScreen..."
+    #retries=0
+    #while [ "$(pgrep -f -c "KlipperScreen")" -gt 0 ]; do
+       # if [ $retries -gt 10 ]; then
+          #  pkill -f "KlipperScreen" || true
+           # if [ $retries -gt 12 ]; then
+             #   echo "KlipperScreen cannot be killed, continuing..."
+               # break
+            #fi
+        #fi
+        #echo "Waiting for KlipperScreen to stop... ${retries}s"
+        #sleep 1
+        #retries=$((retries + 1))
+   # done
+#fi
 
-echo "List running processes..."
-ps aux
+#echo "List running processes..."
+#ps aux
 
-echo "RatOS installed successfully"
+#echo "RatOS installed successfully"

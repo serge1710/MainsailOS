@@ -95,18 +95,18 @@ echo "${BASE_DISTRO}" > /etc/"${BASE_DISTRO}"-variant
 # Install RatOS Configurator           #
 ########################################
 
-#echo "Installing RatOS Configurator..."
+echo "Installing RatOS Configurator..."
 ## setup.sh is in the configurator repo under app/scripts/
-#SETUP_SCRIPT="/home/${BASE_USER}/ratos-configurator/app/scripts/setup.sh"
-#if [ ! -f "${SETUP_SCRIPT}" ]; then
-   # echo "ERROR: setup.sh not found at ${SETUP_SCRIPT}"
-    #echo "Available scripts:"
-    #find /home/${BASE_USER}/ratos-configurator -name "setup.sh" 2>/dev/null
-    #exit 1
-#fi
-#pushd "/home/${BASE_USER}/ratos-configurator/configuration/scripts" &> /dev/null || exit 1
-#sudo -u "${BASE_USER}" bash setup.sh
-#popd &> /dev/null || exit 1
+SETUP_SCRIPT="/home/${BASE_USER}/ratos-configurator/app/scripts/setup.sh"
+if [ ! -f "${SETUP_SCRIPT}" ]; then
+    echo "ERROR: setup.sh not found at ${SETUP_SCRIPT}"
+    echo "Available scripts:"
+    find /home/${BASE_USER}/ratos-configurator -name "setup.sh" 2>/dev/null
+    exit 1
+fi
+pushd "/home/${BASE_USER}/ratos-configurator/configuration/scripts" &> /dev/null || exit 1
+sudo -u "${BASE_USER}" bash setup.sh
+popd &> /dev/null || exit 1
 
 ########################################
 # Start configurator for extension API #

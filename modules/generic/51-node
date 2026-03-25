@@ -15,7 +15,7 @@ source /files/00-config
 # Configuration                        #
 ########################################
 
-NODE_VERSION="20"
+NODE_VERSION="24"
 
 ########################################
 # Fix /tmp permissions                 #
